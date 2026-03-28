@@ -79,7 +79,7 @@
       try {
         state.width = window.innerWidth || document.documentElement.clientWidth || 800
         state.height = window.innerHeight || document.documentElement.clientHeight || 600
-        state.dpr = Math.min(2, Math.max(1, window.devicePixelRatio || 1))
+        state.dpr = state.width <= 720 ? 1 : Math.min(1.6, Math.max(1, window.devicePixelRatio || 1))
         canvas.width = Math.max(1, Math.floor(state.width * state.dpr))
         canvas.height = Math.max(1, Math.floor(state.height * state.dpr))
         canvas.style.width = `${state.width}px`
@@ -92,21 +92,22 @@
     }
 
     function buildBackgroundDots() {
-      state.backgroundDots = Array.from({ length: 18 }, (_, i) => ({
+      const dotCount = state.width <= 720 ? 10 : 18
+      state.backgroundDots = Array.from({ length: dotCount }, (_, i) => ({
         x: (i * 137.31) % Math.max(1, state.width),
         y: (i * 89.17) % Math.max(1, state.height),
-        r: (i % 3) + 1,
-        speed: 10 + (i % 5) * 6
+        r: state.width <= 720 ? 1 + (i % 2) * 0.6 : (i % 3) + 1,
+        speed: 8 + (i % 5) * 5
       }))
     }
 
     function getLampMetrics() {
-      const cx = state.width * 0.5
+      const isMobile = state.width <= 720
+      const cx = isMobile ? state.width * 0.34 : state.width * 0.5
       const topY = state.height * 0.11
-      const panelOnMobile = state.width <= 720
-      const reservedBottom = panelOnMobile ? Math.min(state.height * 0.26, 180) : 0
-      const bottomY = Math.min(state.height * 0.78, state.height - reservedBottom - 78)
-      const bodyWidth = Math.min(320, state.width * 0.34)
+      const bottomPadding = isMobile ? 120 : 86
+      const bottomY = Math.min(state.height * 0.8, state.height - bottomPadding)
+      const bodyWidth = Math.min(isMobile ? 220 : 320, state.width * (isMobile ? 0.34 : 0.34))
       const neckWidth = bodyWidth * 0.42
       const baseWidth = bodyWidth * 0.7
       const lampHeight = bottomY - topY
