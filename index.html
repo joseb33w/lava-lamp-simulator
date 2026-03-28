@@ -15,7 +15,16 @@
 
     <div id="error-banner" class="error-banner hidden" role="status" aria-live="polite"></div>
 
-    <section class="control-panel" aria-label="Lava lamp controls">
+    <button id="panel-toggle" class="panel-toggle" type="button" aria-label="Open controls" aria-controls="control-panel" aria-expanded="false">
+      <span class="panel-toggle-icon" aria-hidden="true">
+        <span></span>
+        <span></span>
+        <span></span>
+      </span>
+      <span class="panel-toggle-text">Controls</span>
+    </button>
+
+    <section id="control-panel" class="control-panel" aria-label="Lava lamp controls">
       <div class="panel-grab" aria-hidden="true"></div>
       <div class="panel-header">
         <p class="eyebrow">Interactive Fluid Toy</p>
