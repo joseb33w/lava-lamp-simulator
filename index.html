@@ -13,19 +13,13 @@
   <main class="app-shell">
     <canvas id="lamp-canvas" aria-label="Interactive lava lamp simulator"></canvas>
 
-    <div id="fallback-message" class="fallback-message hidden" role="status" aria-live="polite">
-      <div class="fallback-card">
-        <p class="eyebrow">Renderer recovery</p>
-        <h2>Refreshing the lamp view…</h2>
-        <p>If your browser had trouble with the advanced effect, a simpler live renderer is loading automatically.</p>
-      </div>
-    </div>
+    <div id="error-banner" class="error-banner hidden" role="status" aria-live="polite"></div>
 
     <section class="control-panel" aria-label="Lava lamp controls">
       <div class="panel-header">
         <p class="eyebrow">Interactive Fluid Toy</p>
         <h1>Lava Lamp</h1>
-        <p class="panel-copy">Watch soft glowing blobs rise, cool, merge, split apart, and shimmer through reflective glass. Adjust the palette and intensity in real time.</p>
+        <p class="panel-copy">A rebuilt version focused on reliable preview rendering. Adjust the palette, heat, and activity in real time.</p>
       </div>
 
       <div class="controls-grid">
@@ -47,12 +41,12 @@
 
         <div class="control-group slider-group">
           <label for="heat-level">Heat</label>
-          <input id="heat-level" type="range" min="0.6" max="1.5" step="0.01" value="1">
+          <input id="heat-level" type="range" min="0.6" max="1.6" step="0.01" value="1">
         </div>
 
         <div class="control-group slider-group">
           <label for="blob-count">Blob activity</label>
-          <input id="blob-count" type="range" min="8" max="18" step="1" value="12">
+          <input id="blob-count" type="range" min="6" max="16" step="1" value="10">
         </div>
       </div>
 
