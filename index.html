@@ -17,33 +17,35 @@
       <div class="panel-header">
         <p class="eyebrow">Interactive Fluid Toy</p>
         <h1>Lava Lamp</h1>
-        <p class="panel-copy">Watch glowing blobs rise, cool, merge, split apart, and drift back down. Drag the color controls to restyle the lava and the surrounding liquid instantly.</p>
+        <p class="panel-copy">Watch soft metaball blobs rise, cool, merge, split apart, and glow through reflective glass. Adjust the palette and intensity in real time.</p>
       </div>
 
-      <div class="control-group">
-        <label for="lava-color">Lava color</label>
-        <div class="color-row">
-          <input id="lava-color" type="color" value="#ff6b3d" aria-label="Choose lava color">
-          <span id="lava-color-value" class="color-value">#ff6b3d</span>
+      <div class="controls-grid">
+        <div class="control-group">
+          <label for="lava-color">Lava color</label>
+          <div class="color-row">
+            <input id="lava-color" type="color" value="#ff6b3d" aria-label="Choose lava color">
+            <span id="lava-color-value" class="color-value">#ff6b3d</span>
+          </div>
         </div>
-      </div>
 
-      <div class="control-group">
-        <label for="liquid-color">Liquid color</label>
-        <div class="color-row">
-          <input id="liquid-color" type="color" value="#4b2a8f" aria-label="Choose liquid color">
-          <span id="liquid-color-value" class="color-value">#4b2a8f</span>
+        <div class="control-group">
+          <label for="liquid-color">Liquid color</label>
+          <div class="color-row">
+            <input id="liquid-color" type="color" value="#4b2a8f" aria-label="Choose liquid color">
+            <span id="liquid-color-value" class="color-value">#4b2a8f</span>
+          </div>
         </div>
-      </div>
 
-      <div class="control-group slider-group">
-        <label for="heat-level">Heat</label>
-        <input id="heat-level" type="range" min="0.6" max="1.5" step="0.01" value="1">
-      </div>
+        <div class="control-group slider-group">
+          <label for="heat-level">Heat</label>
+          <input id="heat-level" type="range" min="0.6" max="1.5" step="0.01" value="1">
+        </div>
 
-      <div class="control-group slider-group">
-        <label for="blob-count">Blob activity</label>
-        <input id="blob-count" type="range" min="8" max="18" step="1" value="12">
+        <div class="control-group slider-group">
+          <label for="blob-count">Blob activity</label>
+          <input id="blob-count" type="range" min="8" max="18" step="1" value="12">
+        </div>
       </div>
 
       <button id="shuffle-palette" class="action-button" type="button">Shuffle palette</button>

@@ -29,8 +29,7 @@
     targetBlobCount: 12,
     lavaColor: lavaColorInput.value,
     liquidColor: liquidColorInput.value,
-    blobs: [],
-    particles: []
+    blobs: []
   }
 
   function clamp(value, min, max) {
@@ -72,28 +71,46 @@
     ensureBlobCount()
   }
 
+  function getLampMetrics() {
+    const cx = state.width * 0.5
+    const topY = state.height * 0.11
+    const bottomY = state.height * 0.89
+    const bodyWidth = Math.min(320, state.width * 0.34)
+    const neckWidth = bodyWidth * 0.42
+    const baseWidth = bodyWidth * 0.7
+    const lampHeight = bottomY - topY
+    return { cx, topY, bottomY, bodyWidth, neckWidth, baseWidth, lampHeight }
+  }
+
+  function getLampHalfWidthAt(y) {
+    const { topY, bottomY, bodyWidth, neckWidth, baseWidth } = getLampMetrics()
+    const t = clamp((y - topY) / (bottomY - topY), 0, 1)
+    const widthA = lerp(neckWidth * 0.5, bodyWidth * 0.52, Math.sin(t * Math.PI * 0.55))
+    const widthB = lerp(bodyWidth * 0.52, baseWidth * 0.5, Math.max(0, (t - 0.58) / 0.42))
+    return t < 0.58 ? widthA : widthB
+  }
+
   function createBlob(fromBottom = false) {
-    const lampWidth = Math.min(280, state.width * 0.34)
-    const centerX = state.width * 0.5 + randomBetween(-lampWidth * 0.18, lampWidth * 0.18)
-    const radius = randomBetween(24, 58)
+    const { cx, topY, bottomY, lampHeight } = getLampMetrics()
     const y = fromBottom
-      ? state.height * 0.8 + randomBetween(-20, 30)
-      : randomBetween(state.height * 0.28, state.height * 0.78)
+      ? bottomY - randomBetween(lampHeight * 0.02, lampHeight * 0.1)
+      : randomBetween(topY + lampHeight * 0.18, bottomY - lampHeight * 0.18)
+    const halfWidth = getLampHalfWidthAt(y)
+    const radius = randomBetween(26, 60)
 
     return {
-      x: centerX,
+      x: cx + randomBetween(-halfWidth * 0.32, halfWidth * 0.32),
       y,
       radius,
       baseRadius: radius,
-      vx: randomBetween(-0.16, 0.16),
-      vy: randomBetween(-0.55, -0.12),
+      vx: randomBetween(-0.12, 0.12),
+      vy: randomBetween(-0.5, -0.1),
       wobble: randomBetween(0, Math.PI * 2),
       wobbleSpeed: randomBetween(0.012, 0.03),
-      stretch: randomBetween(0.85, 1.2),
+      stretch: randomBetween(0.88, 1.16),
       heat: randomBetween(0.75, 1.2),
       cooling: randomBetween(0.0012, 0.0026),
-      merging: false,
-      splitTimer: randomBetween(240, 520)
+      splitTimer: randomBetween(220, 520)
     }
   }
 
@@ -107,9 +124,7 @@
   }
 
   function updateBlobs() {
-    const lampTop = state.height * 0.12
-    const lampBottom = state.height * 0.88
-    const lampHalfWidth = Math.min(140, state.width * 0.17)
+    const { cx, topY, bottomY } = getLampMetrics()
 
     state.blobs.forEach((blob) => {
       blob.wobble += blob.wobbleSpeed
@@ -123,27 +138,27 @@
       blob.x += blob.vx * 1.2
       blob.y += blob.vy * 1.2
 
-      const horizontalLimit = lampHalfWidth - blob.radius * 0.36
-      const dx = blob.x - state.width * 0.5
+      const horizontalLimit = getLampHalfWidthAt(blob.y) - blob.radius * 0.42
+      const dx = blob.x - cx
       if (dx < -horizontalLimit || dx > horizontalLimit) {
-        blob.vx *= -0.92
-        blob.x = state.width * 0.5 + clamp(dx, -horizontalLimit, horizontalLimit)
+        blob.vx *= -0.9
+        blob.x = cx + clamp(dx, -horizontalLimit, horizontalLimit)
       }
 
-      if (blob.y < lampTop + blob.radius * 0.9) {
-        blob.y = lampTop + blob.radius * 0.9
+      if (blob.y < topY + blob.radius * 0.9) {
+        blob.y = topY + blob.radius * 0.9
         blob.vy = Math.abs(blob.vy) * 0.35
         blob.heat = randomBetween(0.35, 0.6)
       }
 
-      if (blob.y > lampBottom - blob.radius * 0.6) {
-        blob.y = lampBottom - blob.radius * 0.6
+      if (blob.y > bottomY - blob.radius * 0.6) {
+        blob.y = bottomY - blob.radius * 0.6
         blob.vy = -randomBetween(0.3, 0.9) * state.heat
         blob.heat = randomBetween(0.9, 1.35)
       }
 
-      blob.radius = blob.baseRadius * lerp(0.88, 1.18, (Math.sin(blob.wobble * 1.2) + 1) * 0.5)
-      blob.stretch = lerp(0.82, 1.26, (Math.cos(blob.wobble * 0.9) + 1) * 0.5)
+      blob.radius = blob.baseRadius * lerp(0.9, 1.16, (Math.sin(blob.wobble * 1.2) + 1) * 0.5)
+      blob.stretch = lerp(0.82, 1.24, (Math.cos(blob.wobble * 0.9) + 1) * 0.5)
       blob.splitTimer -= 1
     })
 
@@ -159,23 +174,23 @@
         const dx = b.x - a.x
         const dy = b.y - a.y
         const dist = Math.hypot(dx, dy) || 0.001
-        const target = (a.radius + b.radius) * 0.72
+        const target = (a.radius + b.radius) * 0.82
 
         if (dist < target) {
           const overlap = (target - dist) / target
-          const pull = overlap * 0.018
-          a.vx += dx * pull * 0.02
-          a.vy += dy * pull * 0.02
-          b.vx -= dx * pull * 0.02
-          b.vy -= dy * pull * 0.02
+          const pull = overlap * 0.024
+          a.vx += dx * pull * 0.018
+          a.vy += dy * pull * 0.018
+          b.vx -= dx * pull * 0.018
+          b.vy -= dy * pull * 0.018
 
-          if (overlap > 0.24 && state.blobs.length > 6) {
-            const mergedRadius = Math.sqrt(a.radius * a.radius + b.radius * b.radius) * 0.92
+          if (overlap > 0.34 && state.blobs.length > 6) {
+            const mergedRadius = Math.sqrt(a.baseRadius * a.baseRadius + b.baseRadius * b.baseRadius) * 0.94
             a.x = (a.x + b.x) * 0.5
             a.y = (a.y + b.y) * 0.5
             a.vx = (a.vx + b.vx) * 0.5
             a.vy = (a.vy + b.vy) * 0.5
-            a.baseRadius = clamp(mergedRadius, 28, 74)
+            a.baseRadius = clamp(mergedRadius, 28, 82)
             a.radius = a.baseRadius
             a.heat = Math.max(a.heat, b.heat)
             a.splitTimer = randomBetween(180, 420)
@@ -191,20 +206,20 @@
   function maybeSplitBlob() {
     for (let i = 0; i < state.blobs.length; i += 1) {
       const blob = state.blobs[i]
-      if (blob.baseRadius > 48 && blob.splitTimer <= 0 && state.blobs.length < 18) {
-        const childRadius = blob.baseRadius * 0.62
-        blob.baseRadius *= 0.7
+      if (blob.baseRadius > 50 && blob.splitTimer <= 0 && state.blobs.length < 18) {
+        const childRadius = blob.baseRadius * 0.58
+        blob.baseRadius *= 0.72
         blob.radius = blob.baseRadius
         blob.splitTimer = randomBetween(220, 420)
 
         const child = {
           ...createBlob(false),
-          x: blob.x + randomBetween(-18, 18),
-          y: blob.y + randomBetween(-12, 12),
+          x: blob.x + randomBetween(-16, 16),
+          y: blob.y + randomBetween(-10, 10),
           baseRadius: childRadius,
           radius: childRadius,
-          vx: blob.vx + randomBetween(-0.4, 0.4),
-          vy: blob.vy + randomBetween(-0.3, 0.3),
+          vx: blob.vx + randomBetween(-0.35, 0.35),
+          vy: blob.vy + randomBetween(-0.28, 0.28),
           heat: blob.heat * randomBetween(0.88, 1.08),
           splitTimer: randomBetween(260, 520)
         }
@@ -233,15 +248,8 @@
     }
   }
 
-  function drawLampGlass() {
-    const cx = state.width * 0.5
-    const topY = state.height * 0.11
-    const bottomY = state.height * 0.89
-    const bodyWidth = Math.min(280, state.width * 0.34)
-    const neckWidth = bodyWidth * 0.42
-    const baseWidth = bodyWidth * 0.68
-
-    ctx.save()
+  function traceLampPath() {
+    const { cx, topY, bottomY, bodyWidth, neckWidth, baseWidth } = getLampMetrics()
     ctx.beginPath()
     ctx.moveTo(cx - neckWidth * 0.5, topY)
     ctx.quadraticCurveTo(cx - bodyWidth * 0.52, state.height * 0.28, cx - bodyWidth * 0.42, state.height * 0.55)
@@ -250,58 +258,119 @@
     ctx.quadraticCurveTo(cx + bodyWidth * 0.34, state.height * 0.82, cx + bodyWidth * 0.42, state.height * 0.55)
     ctx.quadraticCurveTo(cx + bodyWidth * 0.52, state.height * 0.28, cx + neckWidth * 0.5, topY)
     ctx.closePath()
+  }
+
+  function drawBlobsMetaball() {
+    ctx.save()
+    ctx.globalCompositeOperation = 'lighter'
+    ctx.filter = 'blur(18px) saturate(1.15)'
+
+    state.blobs.forEach((blob) => {
+      const glow = ctx.createRadialGradient(blob.x, blob.y, blob.radius * 0.12, blob.x, blob.y, blob.radius * 1.2)
+      glow.addColorStop(0, rgba('#ffffff', 0.88))
+      glow.addColorStop(0.16, rgba(state.lavaColor, 0.98))
+      glow.addColorStop(0.7, rgba(state.lavaColor, 0.78))
+      glow.addColorStop(1, rgba(state.lavaColor, 0.05))
+      ctx.fillStyle = glow
+      ctx.beginPath()
+      ctx.ellipse(blob.x, blob.y, blob.radius * blob.stretch, blob.radius / blob.stretch, Math.sin(blob.wobble) * 0.35, 0, Math.PI * 2)
+      ctx.fill()
+    })
+
+    ctx.restore()
+
+    ctx.save()
+    ctx.globalCompositeOperation = 'screen'
+    state.blobs.forEach((blob) => {
+      const core = ctx.createRadialGradient(blob.x - blob.radius * 0.18, blob.y - blob.radius * 0.24, 2, blob.x, blob.y, blob.radius)
+      core.addColorStop(0, 'rgba(255,255,255,0.42)')
+      core.addColorStop(0.18, rgba(state.lavaColor, 0.92))
+      core.addColorStop(1, rgba(state.lavaColor, 0.12))
+      ctx.fillStyle = core
+      ctx.beginPath()
+      ctx.ellipse(blob.x, blob.y, blob.radius * blob.stretch * 0.92, blob.radius / blob.stretch * 0.92, Math.sin(blob.wobble) * 0.35, 0, Math.PI * 2)
+      ctx.fill()
+    })
+    ctx.restore()
+  }
+
+  function drawLampGlass() {
+    const { cx, topY, bottomY, bodyWidth, neckWidth, baseWidth } = getLampMetrics()
+
+    ctx.save()
+    traceLampPath()
     ctx.clip()
 
     const liquid = ctx.createLinearGradient(0, topY, 0, bottomY)
-    liquid.addColorStop(0, rgba(state.liquidColor, 0.88))
-    liquid.addColorStop(0.5, rgba(state.liquidColor, 0.68))
-    liquid.addColorStop(1, rgba('#12081e', 0.96))
+    liquid.addColorStop(0, rgba(state.liquidColor, 0.92))
+    liquid.addColorStop(0.45, rgba(state.liquidColor, 0.72))
+    liquid.addColorStop(1, rgba('#12081e', 0.98))
     ctx.fillStyle = liquid
     ctx.fillRect(cx - bodyWidth, topY, bodyWidth * 2, bottomY - topY)
 
-    const innerGlow = ctx.createRadialGradient(cx, state.height * 0.56, 10, cx, state.height * 0.56, bodyWidth * 0.95)
-    innerGlow.addColorStop(0, rgba(state.lavaColor, 0.24))
+    const innerGlow = ctx.createRadialGradient(cx, state.height * 0.56, 10, cx, state.height * 0.56, bodyWidth * 1.05)
+    innerGlow.addColorStop(0, rgba(state.lavaColor, 0.28))
+    innerGlow.addColorStop(0.55, rgba(state.lavaColor, 0.08))
     innerGlow.addColorStop(1, 'rgba(255,255,255,0)')
     ctx.fillStyle = innerGlow
     ctx.fillRect(cx - bodyWidth, topY, bodyWidth * 2, bottomY - topY)
 
-    drawBlobs()
+    drawBlobsMetaball()
+
+    const caustic = ctx.createLinearGradient(cx - bodyWidth * 0.5, topY, cx + bodyWidth * 0.5, bottomY)
+    caustic.addColorStop(0, 'rgba(255,255,255,0.08)')
+    caustic.addColorStop(0.5, 'rgba(255,255,255,0.015)')
+    caustic.addColorStop(1, 'rgba(255,255,255,0.06)')
+    ctx.fillStyle = caustic
+    ctx.fillRect(cx - bodyWidth, topY, bodyWidth * 2, bottomY - topY)
+
     ctx.restore()
 
-    ctx.strokeStyle = 'rgba(255,255,255,0.34)'
+    ctx.save()
+    ctx.shadowColor = rgba('#ffffff', 0.18)
+    ctx.shadowBlur = 18
+    ctx.strokeStyle = 'rgba(255,255,255,0.36)'
     ctx.lineWidth = 3
-    ctx.beginPath()
-    ctx.moveTo(cx - neckWidth * 0.5, topY)
-    ctx.quadraticCurveTo(cx - bodyWidth * 0.52, state.height * 0.28, cx - bodyWidth * 0.42, state.height * 0.55)
-    ctx.quadraticCurveTo(cx - bodyWidth * 0.34, state.height * 0.82, cx - baseWidth * 0.5, bottomY)
-    ctx.lineTo(cx + baseWidth * 0.5, bottomY)
-    ctx.quadraticCurveTo(cx + bodyWidth * 0.34, state.height * 0.82, cx + bodyWidth * 0.42, state.height * 0.55)
-    ctx.quadraticCurveTo(cx + bodyWidth * 0.52, state.height * 0.28, cx + neckWidth * 0.5, topY)
-    ctx.closePath()
+    traceLampPath()
     ctx.stroke()
+    ctx.restore()
 
-    const glassShine = ctx.createLinearGradient(cx - bodyWidth * 0.5, 0, cx + bodyWidth * 0.1, 0)
-    glassShine.addColorStop(0, 'rgba(255,255,255,0.2)')
-    glassShine.addColorStop(0.4, 'rgba(255,255,255,0.03)')
-    glassShine.addColorStop(1, 'rgba(255,255,255,0)')
-    ctx.fillStyle = glassShine
-    ctx.fillRect(cx - bodyWidth * 0.42, topY + 8, bodyWidth * 0.22, bottomY - topY - 16)
+    const leftShine = ctx.createLinearGradient(cx - bodyWidth * 0.58, 0, cx - bodyWidth * 0.16, 0)
+    leftShine.addColorStop(0, 'rgba(255,255,255,0.3)')
+    leftShine.addColorStop(0.3, 'rgba(255,255,255,0.08)')
+    leftShine.addColorStop(1, 'rgba(255,255,255,0)')
+    ctx.fillStyle = leftShine
+    ctx.fillRect(cx - bodyWidth * 0.45, topY + 12, bodyWidth * 0.2, bottomY - topY - 24)
+
+    const rightReflection = ctx.createLinearGradient(cx + bodyWidth * 0.1, 0, cx + bodyWidth * 0.44, 0)
+    rightReflection.addColorStop(0, 'rgba(255,255,255,0.02)')
+    rightReflection.addColorStop(0.5, 'rgba(255,255,255,0.12)')
+    rightReflection.addColorStop(1, 'rgba(255,255,255,0)')
+    ctx.fillStyle = rightReflection
+    ctx.fillRect(cx + bodyWidth * 0.16, topY + 40, bodyWidth * 0.13, bottomY - topY - 90)
+
+    const rimGlow = ctx.createLinearGradient(0, topY, 0, topY + 42)
+    rimGlow.addColorStop(0, 'rgba(255,255,255,0.2)')
+    rimGlow.addColorStop(1, 'rgba(255,255,255,0)')
+    ctx.fillStyle = rimGlow
+    ctx.fillRect(cx - neckWidth * 0.7, topY - 2, neckWidth * 1.4, 42)
 
     drawLampCaps(cx, topY, bottomY, neckWidth, baseWidth)
   }
 
   function drawLampCaps(cx, topY, bottomY, neckWidth, baseWidth) {
     const topCap = ctx.createLinearGradient(0, topY - 34, 0, topY + 14)
-    topCap.addColorStop(0, '#c5a76b')
-    topCap.addColorStop(1, '#5f3d18')
+    topCap.addColorStop(0, '#d8b57d')
+    topCap.addColorStop(0.45, '#8d6330')
+    topCap.addColorStop(1, '#4b2d10')
     ctx.fillStyle = topCap
     ctx.beginPath()
     ctx.roundRect(cx - neckWidth * 0.72, topY - 32, neckWidth * 1.44, 30, 16)
     ctx.fill()
 
     const base = ctx.createLinearGradient(0, bottomY - 18, 0, bottomY + 76)
-    base.addColorStop(0, '#c38c3f')
-    base.addColorStop(0.5, '#7b4c1f')
+    base.addColorStop(0, '#d39a46')
+    base.addColorStop(0.42, '#8a5524')
     base.addColorStop(1, '#2a1308')
     ctx.fillStyle = base
     ctx.beginPath()
@@ -313,25 +382,13 @@
     ctx.fill()
 
     const heaterGlow = ctx.createRadialGradient(cx, bottomY + 18, 10, cx, bottomY + 18, baseWidth * 0.46)
-    heaterGlow.addColorStop(0, rgba(state.lavaColor, 0.65))
+    heaterGlow.addColorStop(0, rgba(state.lavaColor, 0.75))
+    heaterGlow.addColorStop(0.42, rgba(state.lavaColor, 0.26))
     heaterGlow.addColorStop(1, 'rgba(255,255,255,0)')
     ctx.fillStyle = heaterGlow
     ctx.beginPath()
     ctx.ellipse(cx, bottomY + 18, baseWidth * 0.4, 24, 0, 0, Math.PI * 2)
     ctx.fill()
-  }
-
-  function drawBlobs() {
-    state.blobs.forEach((blob) => {
-      const glow = ctx.createRadialGradient(blob.x, blob.y, 4, blob.x, blob.y, blob.radius * 1.45)
-      glow.addColorStop(0, rgba('#ffffff', 0.42))
-      glow.addColorStop(0.25, rgba(state.lavaColor, 0.95))
-      glow.addColorStop(1, rgba(state.lavaColor, 0.08))
-      ctx.fillStyle = glow
-      ctx.beginPath()
-      ctx.ellipse(blob.x, blob.y, blob.radius * blob.stretch, blob.radius / blob.stretch, Math.sin(blob.wobble) * 0.35, 0, Math.PI * 2)
-      ctx.fill()
-    })
   }
 
   function render() {
