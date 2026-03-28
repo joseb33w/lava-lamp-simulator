@@ -11,6 +11,8 @@
     const heatLevelInput = document.getElementById('heat-level')
     const blobCountInput = document.getElementById('blob-count')
     const shufflePaletteBtn = document.getElementById('shuffle-palette')
+    const panelToggleBtn = document.getElementById('panel-toggle')
+    const appShell = document.querySelector('.app-shell')
 
     if (!canvas) {
       throw new Error('Canvas element not found.')
@@ -60,6 +62,29 @@
       return min + Math.random() * (max - min)
     }
 
+    function setPanelOpen(isOpen) {
+      try {
+        if (!appShell || !panelToggleBtn) return
+        appShell.classList.toggle('panel-open', isOpen)
+        panelToggleBtn.setAttribute('aria-expanded', String(isOpen))
+        panelToggleBtn.setAttribute('aria-label', isOpen ? 'Close controls' : 'Open controls')
+      } catch (e) {
+        showError(`Panel toggle error: ${e.message}`)
+      }
+    }
+
+    function syncPanelMode() {
+      try {
+        if (!window.matchMedia('(max-width: 720px)').matches) {
+          setPanelOpen(true)
+          return
+        }
+        setPanelOpen(false)
+      } catch (e) {
+        showError(`Panel mode error: ${e.message}`)
+      }
+    }
+
     function hexToRgb(hex) {
       const safe = String(hex || '#ffffff').replace('#', '')
       const full = safe.length === 3 ? safe.split('').map((char) => char + char).join('') : safe
@@ -86,6 +111,7 @@
         canvas.style.height = `${state.height}px`
         ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0)
         buildBackgroundDots()
+        syncPanelMode()
       } catch (e) {
         showError(`Resize error: ${e.message}`)
       }
@@ -394,6 +420,17 @@
     function bindEvents() {
       try {
         window.addEventListener('resize', resize)
+
+        if (panelToggleBtn && appShell) {
+          panelToggleBtn.addEventListener('click', () => {
+            try {
+              const isOpen = appShell.classList.contains('panel-open')
+              setPanelOpen(!isOpen)
+            } catch (e) {
+              showError(`Panel button error: ${e.message}`)
+            }
+          })
+        }
 
         if (lavaColorInput) {
           lavaColorInput.addEventListener('input', () => {
