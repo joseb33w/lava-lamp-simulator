@@ -12,6 +12,8 @@
     const blobCountInput = document.getElementById('blob-count')
     const shufflePaletteBtn = document.getElementById('shuffle-palette')
     const panelToggleBtn = document.getElementById('panel-toggle')
+    const ambientModeInput = document.getElementById('ambient-mode')
+    const presetButtons = Array.from(document.querySelectorAll('.preset-button'))
     const appShell = document.querySelector('.app-shell')
 
     if (!canvas) {
@@ -23,13 +25,15 @@
       throw new Error('2D canvas context is unavailable.')
     }
 
-    const palettes = [
-      { lava: '#ff6b3d', liquid: '#4b2a8f' },
-      { lava: '#ff4f8b', liquid: '#2a3f8f' },
-      { lava: '#ffd166', liquid: '#234e70' },
-      { lava: '#8aff80', liquid: '#244b5a' },
-      { lava: '#ff7b72', liquid: '#3d246c' }
-    ]
+    const palettes = {
+      classic: { name: 'Classic Orange', lava: '#ff6b3d', liquid: '#4b2a8f' },
+      neon: { name: 'Neon Pink', lava: '#ff4f8b', liquid: '#2a3f8f' },
+      ocean: { name: 'Ocean Blue', lava: '#6ee7ff', liquid: '#163b74' },
+      alien: { name: 'Alien Green', lava: '#8aff80', liquid: '#244b5a' },
+      sunset: { name: 'Sunset Glow', lava: '#ffd166', liquid: '#6b2d5c' }
+    }
+
+    const paletteKeys = Object.keys(palettes)
 
     const state = {
       width: 0,
@@ -43,7 +47,9 @@
       blobs: [],
       animationFrame: null,
       lastFrameTime: 0,
-      backgroundDots: []
+      backgroundDots: [],
+      ambientMode: false,
+      activePreset: 'classic'
     }
 
     function showError(message) {
@@ -75,6 +81,10 @@
 
     function syncPanelMode() {
       try {
+        if (state.ambientMode) {
+          setPanelOpen(false)
+          return
+        }
         if (!window.matchMedia('(max-width: 720px)').matches) {
           setPanelOpen(true)
           return
@@ -82,6 +92,19 @@
         setPanelOpen(false)
       } catch (e) {
         showError(`Panel mode error: ${e.message}`)
+      }
+    }
+
+    function setAmbientMode(isAmbient) {
+      try {
+        state.ambientMode = Boolean(isAmbient)
+        if (appShell) {
+          appShell.classList.toggle('ambient-mode', state.ambientMode)
+        }
+        if (ambientModeInput) ambientModeInput.checked = state.ambientMode
+        syncPanelMode()
+      } catch (e) {
+        showError(`Ambient mode error: ${e.message}`)
       }
     }
 
@@ -98,6 +121,33 @@
     function rgba(hex, alpha) {
       const rgb = hexToRgb(hex)
       return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`
+    }
+
+    function updatePresetButtons() {
+      presetButtons.forEach((button) => {
+        button.classList.toggle('is-active', button.dataset.preset === state.activePreset)
+      })
+    }
+
+    function applyPalette(key, preserveCustomSelection) {
+      try {
+        const palette = palettes[key]
+        if (!palette) return
+        state.activePreset = key
+        state.lavaColor = palette.lava
+        state.liquidColor = palette.liquid
+        if (lavaColorInput) lavaColorInput.value = palette.lava
+        if (liquidColorInput) liquidColorInput.value = palette.liquid
+        if (!preserveCustomSelection) updatePresetButtons()
+        syncLabels()
+      } catch (e) {
+        showError(`Palette error: ${e.message}`)
+      }
+    }
+
+    function markCustomPalette() {
+      state.activePreset = 'custom'
+      presetButtons.forEach((button) => button.classList.remove('is-active'))
     }
 
     function resize() {
@@ -166,9 +216,12 @@
         wobble: randomBetween(0, Math.PI * 2),
         wobbleSpeed: randomBetween(0.01, 0.025),
         stretch: randomBetween(0.9, 1.14),
+        squash: 1,
+        rotation: randomBetween(-0.2, 0.2),
         heat: randomBetween(0.75, 1.2),
         cooling: randomBetween(0.0012, 0.0026),
-        splitTimer: randomBetween(220, 520)
+        splitTimer: randomBetween(220, 520),
+        mergeBias: randomBetween(0.9, 1.15)
       }
     }
 
@@ -215,8 +268,12 @@
           blob.heat = randomBetween(0.9, 1.35)
         }
 
+        const speedStretch = clamp(Math.abs(blob.vy) * 0.55, 0, 0.45)
+        const wobbleStretch = ((Math.cos(blob.wobble * 0.9) + 1) * 0.5) * 0.18
         blob.radius = blob.baseRadius * (0.9 + ((Math.sin(blob.wobble * 1.2) + 1) * 0.5) * 0.26)
-        blob.stretch = 0.84 + ((Math.cos(blob.wobble * 0.9) + 1) * 0.5) * 0.34
+        blob.stretch = 0.88 + speedStretch + wobbleStretch
+        blob.squash = clamp(1.16 - speedStretch * 0.72, 0.72, 1.15)
+        blob.rotation = clamp(blob.vx * 1.4 + Math.sin(blob.wobble * 0.6) * 0.18, -0.5, 0.5)
         blob.splitTimer -= 1
       }
 
@@ -235,6 +292,8 @@
             a.vy += dy * pull * 0.018
             b.vx -= dx * pull * 0.018
             b.vy -= dy * pull * 0.018
+            a.stretch += overlap * 0.08 * a.mergeBias
+            b.stretch += overlap * 0.08 * b.mergeBias
           }
         }
       }
@@ -246,6 +305,13 @@
       bg.addColorStop(0.4, '#0f0618')
       bg.addColorStop(1, '#040109')
       ctx.fillStyle = bg
+      ctx.fillRect(0, 0, state.width, state.height)
+
+      const roomGlow = ctx.createRadialGradient(state.width * 0.5, state.height * 0.58, 20, state.width * 0.5, state.height * 0.58, Math.max(state.width, state.height) * 0.58)
+      roomGlow.addColorStop(0, rgba(state.lavaColor, state.ambientMode ? 0.18 : 0.12))
+      roomGlow.addColorStop(0.5, rgba(state.lavaColor, 0.04))
+      roomGlow.addColorStop(1, 'rgba(0,0,0,0)')
+      ctx.fillStyle = roomGlow
       ctx.fillRect(0, 0, state.width, state.height)
 
       for (let i = 0; i < state.backgroundDots.length; i += 1) {
@@ -271,22 +337,25 @@
     }
 
     function drawBlob(blob) {
-      const outer = ctx.createRadialGradient(blob.x, blob.y, blob.radius * 0.15, blob.x, blob.y, blob.radius * 1.25)
-      outer.addColorStop(0, rgba('#fff8ef', 0.95))
-      outer.addColorStop(0.24, rgba(state.lavaColor, 0.92))
-      outer.addColorStop(1, rgba(state.lavaColor, 0.08))
+      const radiusX = blob.radius * blob.stretch
+      const radiusY = blob.radius * blob.squash
+      const outer = ctx.createRadialGradient(blob.x, blob.y, blob.radius * 0.15, blob.x, blob.y, blob.radius * 1.35)
+      outer.addColorStop(0, rgba('#fff8ef', 0.98))
+      outer.addColorStop(0.24, rgba(state.lavaColor, 0.94))
+      outer.addColorStop(0.7, rgba(state.lavaColor, 0.32))
+      outer.addColorStop(1, rgba(state.lavaColor, 0.04))
       ctx.fillStyle = outer
       ctx.beginPath()
-      ctx.ellipse(blob.x, blob.y, blob.radius * blob.stretch, blob.radius / blob.stretch, Math.sin(blob.wobble) * 0.35, 0, Math.PI * 2)
+      ctx.ellipse(blob.x, blob.y, radiusX, radiusY, blob.rotation, 0, Math.PI * 2)
       ctx.fill()
 
-      const inner = ctx.createRadialGradient(blob.x - blob.radius * 0.2, blob.y - blob.radius * 0.22, 1, blob.x, blob.y, blob.radius)
-      inner.addColorStop(0, 'rgba(255,255,255,0.38)')
-      inner.addColorStop(0.22, rgba(state.lavaColor, 0.82))
-      inner.addColorStop(1, rgba(state.lavaColor, 0.14))
+      const inner = ctx.createRadialGradient(blob.x - blob.radius * 0.24, blob.y - blob.radius * 0.28, 1, blob.x, blob.y, blob.radius)
+      inner.addColorStop(0, 'rgba(255,255,255,0.5)')
+      inner.addColorStop(0.26, rgba(state.lavaColor, 0.88))
+      inner.addColorStop(1, rgba(state.lavaColor, 0.12))
       ctx.fillStyle = inner
       ctx.beginPath()
-      ctx.ellipse(blob.x, blob.y, blob.radius * blob.stretch * 0.98, (blob.radius / blob.stretch) * 0.94, Math.sin(blob.wobble) * 0.35, 0, Math.PI * 2)
+      ctx.ellipse(blob.x, blob.y, radiusX * 0.96, radiusY * 0.92, blob.rotation, 0, Math.PI * 2)
       ctx.fill()
     }
 
@@ -328,13 +397,13 @@
       ctx.closePath()
       ctx.fill()
 
-      const heaterGlow = ctx.createRadialGradient(metrics.cx, metrics.bottomY + 18, 10, metrics.cx, metrics.bottomY + 18, metrics.baseWidth * 0.46)
-      heaterGlow.addColorStop(0, rgba(state.lavaColor, 0.75))
-      heaterGlow.addColorStop(0.42, rgba(state.lavaColor, 0.26))
+      const heaterGlow = ctx.createRadialGradient(metrics.cx, metrics.bottomY + 18, 10, metrics.cx, metrics.bottomY + 18, metrics.baseWidth * 0.52)
+      heaterGlow.addColorStop(0, rgba(state.lavaColor, state.ambientMode ? 0.88 : 0.75))
+      heaterGlow.addColorStop(0.42, rgba(state.lavaColor, 0.32))
       heaterGlow.addColorStop(1, 'rgba(255,255,255,0)')
       ctx.fillStyle = heaterGlow
       ctx.beginPath()
-      ctx.ellipse(metrics.cx, metrics.bottomY + 18, metrics.baseWidth * 0.4, 24, 0, 0, Math.PI * 2)
+      ctx.ellipse(metrics.cx, metrics.bottomY + 18, metrics.baseWidth * 0.44, 28, 0, 0, Math.PI * 2)
       ctx.fill()
     }
 
@@ -345,17 +414,17 @@
       ctx.clip()
 
       const liquid = ctx.createLinearGradient(0, metrics.topY, 0, metrics.bottomY)
-      liquid.addColorStop(0, rgba(state.liquidColor, 0.92))
-      liquid.addColorStop(0.45, rgba(state.liquidColor, 0.72))
-      liquid.addColorStop(1, rgba('#12081e', 0.98))
+      liquid.addColorStop(0, rgba(state.liquidColor, 0.94))
+      liquid.addColorStop(0.45, rgba(state.liquidColor, 0.76))
+      liquid.addColorStop(1, rgba('#12081e', 0.99))
       ctx.fillStyle = liquid
       ctx.fillRect(metrics.cx - metrics.bodyWidth, metrics.topY, metrics.bodyWidth * 2, metrics.bottomY - metrics.topY)
 
-      const innerGlow = ctx.createRadialGradient(metrics.cx, state.height * 0.56, 10, metrics.cx, state.height * 0.56, metrics.bodyWidth * 1.05)
-      innerGlow.addColorStop(0, rgba(state.lavaColor, 0.28))
-      innerGlow.addColorStop(0.55, rgba(state.lavaColor, 0.08))
-      innerGlow.addColorStop(1, 'rgba(255,255,255,0)')
-      ctx.fillStyle = innerGlow
+      const bloom = ctx.createRadialGradient(metrics.cx, state.height * 0.56, 10, metrics.cx, state.height * 0.56, metrics.bodyWidth * 1.2)
+      bloom.addColorStop(0, rgba(state.lavaColor, state.ambientMode ? 0.38 : 0.28))
+      bloom.addColorStop(0.55, rgba(state.lavaColor, 0.12))
+      bloom.addColorStop(1, 'rgba(255,255,255,0)')
+      ctx.fillStyle = bloom
       ctx.fillRect(metrics.cx - metrics.bodyWidth, metrics.topY, metrics.bodyWidth * 2, metrics.bottomY - metrics.topY)
 
       for (let i = 0; i < state.blobs.length; i += 1) {
@@ -363,29 +432,46 @@
       }
 
       const caustic = ctx.createLinearGradient(metrics.cx - metrics.bodyWidth * 0.5, metrics.topY, metrics.cx + metrics.bodyWidth * 0.5, metrics.bottomY)
-      caustic.addColorStop(0, 'rgba(255,255,255,0.08)')
-      caustic.addColorStop(0.5, 'rgba(255,255,255,0.015)')
-      caustic.addColorStop(1, 'rgba(255,255,255,0.06)')
+      caustic.addColorStop(0, 'rgba(255,255,255,0.12)')
+      caustic.addColorStop(0.5, 'rgba(255,255,255,0.02)')
+      caustic.addColorStop(1, 'rgba(255,255,255,0.1)')
       ctx.fillStyle = caustic
       ctx.fillRect(metrics.cx - metrics.bodyWidth, metrics.topY, metrics.bodyWidth * 2, metrics.bottomY - metrics.topY)
 
+      const refractionBand = ctx.createLinearGradient(metrics.cx - metrics.bodyWidth * 0.34, 0, metrics.cx + metrics.bodyWidth * 0.34, 0)
+      refractionBand.addColorStop(0, 'rgba(255,255,255,0.02)')
+      refractionBand.addColorStop(0.3, 'rgba(255,255,255,0.12)')
+      refractionBand.addColorStop(0.55, 'rgba(255,255,255,0.03)')
+      refractionBand.addColorStop(0.8, 'rgba(255,255,255,0.1)')
+      refractionBand.addColorStop(1, 'rgba(255,255,255,0.02)')
+      ctx.fillStyle = refractionBand
+      ctx.fillRect(metrics.cx - metrics.bodyWidth * 0.42, metrics.topY, metrics.bodyWidth * 0.84, metrics.bottomY - metrics.topY)
+
       ctx.restore()
 
-      ctx.strokeStyle = 'rgba(255,255,255,0.34)'
+      ctx.strokeStyle = 'rgba(255,255,255,0.42)'
       ctx.lineWidth = 3
       traceLampPath()
       ctx.stroke()
 
       const leftShine = ctx.createLinearGradient(metrics.cx - metrics.bodyWidth * 0.58, 0, metrics.cx - metrics.bodyWidth * 0.16, 0)
-      leftShine.addColorStop(0, 'rgba(255,255,255,0.3)')
-      leftShine.addColorStop(0.3, 'rgba(255,255,255,0.08)')
+      leftShine.addColorStop(0, 'rgba(255,255,255,0.38)')
+      leftShine.addColorStop(0.3, 'rgba(255,255,255,0.12)')
       leftShine.addColorStop(1, 'rgba(255,255,255,0)')
       ctx.fillStyle = leftShine
       ctx.fillRect(metrics.cx - metrics.bodyWidth * 0.45, metrics.topY + 12, metrics.bodyWidth * 0.2, metrics.bottomY - metrics.topY - 24)
 
+      const movingHighlightX = metrics.cx + Math.sin(state.time * 0.35) * metrics.bodyWidth * 0.08
+      const movingHighlight = ctx.createLinearGradient(movingHighlightX - 28, 0, movingHighlightX + 18, 0)
+      movingHighlight.addColorStop(0, 'rgba(255,255,255,0)')
+      movingHighlight.addColorStop(0.45, 'rgba(255,255,255,0.16)')
+      movingHighlight.addColorStop(1, 'rgba(255,255,255,0)')
+      ctx.fillStyle = movingHighlight
+      ctx.fillRect(movingHighlightX - 18, metrics.topY + 24, 36, metrics.bottomY - metrics.topY - 48)
+
       const rightReflection = ctx.createLinearGradient(metrics.cx + metrics.bodyWidth * 0.1, 0, metrics.cx + metrics.bodyWidth * 0.44, 0)
-      rightReflection.addColorStop(0, 'rgba(255,255,255,0.02)')
-      rightReflection.addColorStop(0.5, 'rgba(255,255,255,0.12)')
+      rightReflection.addColorStop(0, 'rgba(255,255,255,0.03)')
+      rightReflection.addColorStop(0.5, 'rgba(255,255,255,0.16)')
       rightReflection.addColorStop(1, 'rgba(255,255,255,0)')
       ctx.fillStyle = rightReflection
       ctx.fillRect(metrics.cx + metrics.bodyWidth * 0.16, metrics.topY + 40, metrics.bodyWidth * 0.13, metrics.bottomY - metrics.topY - 90)
@@ -394,7 +480,7 @@
     }
 
     function drawFrame(deltaSeconds) {
-      state.time += deltaSeconds
+      state.time += deltaSeconds * (state.ambientMode ? 0.85 : 1)
       drawBackground()
       updateBlobs()
       drawLamp()
@@ -432,10 +518,21 @@
           })
         }
 
+        presetButtons.forEach((button) => {
+          button.addEventListener('click', () => {
+            try {
+              applyPalette(button.dataset.preset)
+            } catch (e) {
+              showError(`Preset button error: ${e.message}`)
+            }
+          })
+        })
+
         if (lavaColorInput) {
           lavaColorInput.addEventListener('input', () => {
             try {
               state.lavaColor = lavaColorInput.value
+              markCustomPalette()
               syncLabels()
             } catch (e) {
               showError(`Lava color error: ${e.message}`)
@@ -447,6 +544,7 @@
           liquidColorInput.addEventListener('input', () => {
             try {
               state.liquidColor = liquidColorInput.value
+              markCustomPalette()
               syncLabels()
             } catch (e) {
               showError(`Liquid color error: ${e.message}`)
@@ -475,15 +573,21 @@
           })
         }
 
+        if (ambientModeInput) {
+          ambientModeInput.addEventListener('change', () => {
+            try {
+              setAmbientMode(ambientModeInput.checked)
+            } catch (e) {
+              showError(`Ambient toggle error: ${e.message}`)
+            }
+          })
+        }
+
         if (shufflePaletteBtn) {
           shufflePaletteBtn.addEventListener('click', () => {
             try {
-              const palette = palettes[Math.floor(Math.random() * palettes.length)]
-              state.lavaColor = palette.lava
-              state.liquidColor = palette.liquid
-              if (lavaColorInput) lavaColorInput.value = palette.lava
-              if (liquidColorInput) liquidColorInput.value = palette.liquid
-              syncLabels()
+              const key = paletteKeys[Math.floor(Math.random() * paletteKeys.length)]
+              applyPalette(key)
             } catch (e) {
               showError(`Shuffle error: ${e.message}`)
             }
@@ -496,10 +600,13 @@
 
     function init() {
       try {
+        applyPalette('classic')
         resize()
         bindEvents()
         syncLabels()
+        updatePresetButtons()
         ensureBlobCount()
+        setAmbientMode(false)
         render(0)
       } catch (e) {
         showError(`Init error: ${e.message}`)
