@@ -33,6 +33,17 @@
       </div>
 
       <div class="controls-grid">
+        <div class="control-group preset-group">
+          <label>Presets</label>
+          <div class="preset-grid" id="preset-grid">
+            <button class="preset-button is-active" type="button" data-preset="classic">Classic Orange</button>
+            <button class="preset-button" type="button" data-preset="neon">Neon Pink</button>
+            <button class="preset-button" type="button" data-preset="ocean">Ocean Blue</button>
+            <button class="preset-button" type="button" data-preset="alien">Alien Green</button>
+            <button class="preset-button" type="button" data-preset="sunset">Sunset Glow</button>
+          </div>
+        </div>
+
         <div class="control-group">
           <label for="lava-color">Lava color</label>
           <div class="color-row">
@@ -57,6 +68,19 @@
         <div class="control-group slider-group">
           <label for="blob-count">Blob activity</label>
           <input id="blob-count" type="range" min="6" max="16" step="1" value="10">
+        </div>
+
+        <div class="control-group toggle-group">
+          <div class="toggle-row">
+            <div>
+              <label for="ambient-mode">Ambient mode</label>
+              <p class="toggle-copy">Hide the UI glow and let the lamp breathe on its own.</p>
+            </div>
+            <label class="switch" aria-label="Toggle ambient mode">
+              <input id="ambient-mode" type="checkbox">
+              <span class="switch-track"></span>
+            </label>
+          </div>
         </div>
       </div>
 
