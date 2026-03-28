@@ -294,6 +294,57 @@
     ctx.restore()
   }
 
+  function drawLampCaps(cx, topY, bottomY, neckWidth, baseWidth) {
+    const topCap = ctx.createLinearGradient(0, topY - 34, 0, topY + 14)
+    topCap.addColorStop(0, '#d8b57d')
+    topCap.addColorStop(0.45, '#8d6330')
+    topCap.addColorStop(1, '#4b2d10')
+    ctx.fillStyle = topCap
+    ctx.beginPath()
+    if (typeof ctx.roundRect === 'function') {
+      ctx.roundRect(cx - neckWidth * 0.72, topY - 32, neckWidth * 1.44, 30, 16)
+    } else {
+      const x = cx - neckWidth * 0.72
+      const y = topY - 32
+      const w = neckWidth * 1.44
+      const h = 30
+      const r = 16
+      ctx.moveTo(x + r, y)
+      ctx.lineTo(x + w - r, y)
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r)
+      ctx.lineTo(x + w, y + h - r)
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h)
+      ctx.lineTo(x + r, y + h)
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r)
+      ctx.lineTo(x, y + r)
+      ctx.quadraticCurveTo(x, y, x + r, y)
+      ctx.closePath()
+    }
+    ctx.fill()
+
+    const base = ctx.createLinearGradient(0, bottomY - 18, 0, bottomY + 76)
+    base.addColorStop(0, '#d39a46')
+    base.addColorStop(0.42, '#8a5524')
+    base.addColorStop(1, '#2a1308')
+    ctx.fillStyle = base
+    ctx.beginPath()
+    ctx.moveTo(cx - baseWidth * 0.72, bottomY)
+    ctx.lineTo(cx + baseWidth * 0.72, bottomY)
+    ctx.lineTo(cx + baseWidth * 0.52, bottomY + 62)
+    ctx.lineTo(cx - baseWidth * 0.52, bottomY + 62)
+    ctx.closePath()
+    ctx.fill()
+
+    const heaterGlow = ctx.createRadialGradient(cx, bottomY + 18, 10, cx, bottomY + 18, baseWidth * 0.46)
+    heaterGlow.addColorStop(0, rgba(state.lavaColor, 0.75))
+    heaterGlow.addColorStop(0.42, rgba(state.lavaColor, 0.26))
+    heaterGlow.addColorStop(1, 'rgba(255,255,255,0)')
+    ctx.fillStyle = heaterGlow
+    ctx.beginPath()
+    ctx.ellipse(cx, bottomY + 18, baseWidth * 0.4, 24, 0, 0, Math.PI * 2)
+    ctx.fill()
+  }
+
   function drawLampGlass() {
     const { cx, topY, bottomY, bodyWidth, neckWidth, baseWidth } = getLampMetrics()
 
@@ -356,39 +407,6 @@
     ctx.fillRect(cx - neckWidth * 0.7, topY - 2, neckWidth * 1.4, 42)
 
     drawLampCaps(cx, topY, bottomY, neckWidth, baseWidth)
-  }
-
-  function drawLampCaps(cx, topY, bottomY, neckWidth, baseWidth) {
-    const topCap = ctx.createLinearGradient(0, topY - 34, 0, topY + 14)
-    topCap.addColorStop(0, '#d8b57d')
-    topCap.addColorStop(0.45, '#8d6330')
-    topCap.addColorStop(1, '#4b2d10')
-    ctx.fillStyle = topCap
-    ctx.beginPath()
-    ctx.roundRect(cx - neckWidth * 0.72, topY - 32, neckWidth * 1.44, 30, 16)
-    ctx.fill()
-
-    const base = ctx.createLinearGradient(0, bottomY - 18, 0, bottomY + 76)
-    base.addColorStop(0, '#d39a46')
-    base.addColorStop(0.42, '#8a5524')
-    base.addColorStop(1, '#2a1308')
-    ctx.fillStyle = base
-    ctx.beginPath()
-    ctx.moveTo(cx - baseWidth * 0.72, bottomY)
-    ctx.lineTo(cx + baseWidth * 0.72, bottomY)
-    ctx.lineTo(cx + baseWidth * 0.52, bottomY + 62)
-    ctx.lineTo(cx - baseWidth * 0.52, bottomY + 62)
-    ctx.closePath()
-    ctx.fill()
-
-    const heaterGlow = ctx.createRadialGradient(cx, bottomY + 18, 10, cx, bottomY + 18, baseWidth * 0.46)
-    heaterGlow.addColorStop(0, rgba(state.lavaColor, 0.75))
-    heaterGlow.addColorStop(0.42, rgba(state.lavaColor, 0.26))
-    heaterGlow.addColorStop(1, 'rgba(255,255,255,0)')
-    ctx.fillStyle = heaterGlow
-    ctx.beginPath()
-    ctx.ellipse(cx, bottomY + 18, baseWidth * 0.4, 24, 0, 0, Math.PI * 2)
-    ctx.fill()
   }
 
   function render() {

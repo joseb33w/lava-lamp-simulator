@@ -56,6 +56,7 @@ body {
   border: 1px solid var(--panel-border);
   background: linear-gradient(180deg, rgba(27, 16, 44, 0.82), rgba(12, 8, 22, 0.68));
   backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
   box-shadow: var(--shadow);
 }
 
