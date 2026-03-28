@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Lava Lamp Simulator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <canvas id="lamp-canvas" aria-label="Interactive lava lamp simulator"></canvas>
+
+    <section class="control-panel" aria-label="Lava lamp controls">
+      <div class="panel-header">
+        <p class="eyebrow">Interactive Fluid Toy</p>
+        <h1>Lava Lamp</h1>
+        <p class="panel-copy">Watch glowing blobs rise, cool, merge, split apart, and drift back down. Drag the color controls to restyle the lava and the surrounding liquid instantly.</p>
+      </div>
+
+      <div class="control-group">
+        <label for="lava-color">Lava color</label>
+        <div class="color-row">
+          <input id="lava-color" type="color" value="#ff6b3d" aria-label="Choose lava color">
+          <span id="lava-color-value" class="color-value">#ff6b3d</span>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label for="liquid-color">Liquid color</label>
+        <div class="color-row">
+          <input id="liquid-color" type="color" value="#4b2a8f" aria-label="Choose liquid color">
+          <span id="liquid-color-value" class="color-value">#4b2a8f</span>
+        </div>
+      </div>
+
+      <div class="control-group slider-group">
+        <label for="heat-level">Heat</label>
+        <input id="heat-level" type="range" min="0.6" max="1.5" step="0.01" value="1">
+      </div>
+
+      <div class="control-group slider-group">
+        <label for="blob-count">Blob activity</label>
+        <input id="blob-count" type="range" min="8" max="18" step="1" value="12">
+      </div>
+
+      <button id="shuffle-palette" class="action-button" type="button">Shuffle palette</button>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
