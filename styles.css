@@ -67,16 +67,23 @@ body {
   z-index: 10;
   width: min(380px, calc(100vw - 32px));
   max-height: calc(100vh - max(32px, env(safe-area-inset-top) + env(safe-area-inset-bottom)));
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
   padding: 18px;
   border-radius: 24px;
   border: 1px solid var(--panel-border);
   background: linear-gradient(180deg, rgba(27, 16, 44, 0.82), rgba(12, 8, 22, 0.68));
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   box-shadow: var(--shadow);
+  will-change: transform;
+}
+
+.panel-grab {
+  display: none;
 }
 
 .panel-header h1 {
@@ -160,16 +167,67 @@ input[type="range"] {
 
 @media (max-width: 720px) {
   .control-panel {
-    top: auto;
-    right: 16px;
-    left: 16px;
-    bottom: max(16px, env(safe-area-inset-bottom));
-    width: auto;
-    max-height: min(38vh, 340px);
-    padding-bottom: calc(18px + env(safe-area-inset-bottom));
+    top: max(16px, env(safe-area-inset-top));
+    bottom: auto;
+    right: 12px;
+    left: auto;
+    width: min(280px, calc(100vw - 24px));
+    max-height: min(72vh, 560px);
+    padding: 14px 14px 16px;
+    border-radius: 22px;
+  }
+
+  .panel-grab {
+    display: block;
+    width: 42px;
+    height: 4px;
+    margin: 0 auto 12px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.18);
+  }
+
+  .panel-header h1 {
+    font-size: 1.7rem;
   }
 
   .panel-copy {
-    font-size: 0.9rem;
+    font-size: 0.88rem;
+    margin-bottom: 14px;
+  }
+
+  .controls-grid {
+    gap: 12px;
+  }
+
+  .control-group label {
+    font-size: 0.82rem;
+    margin-bottom: 6px;
+  }
+
+  .color-row {
+    grid-template-columns: 56px minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  input[type="color"] {
+    width: 56px;
+    height: 40px;
+  }
+
+  .color-value,
+  .action-button {
+    padding: 11px 12px;
+  }
+}
+
+@media (max-width: 420px) {
+  .control-panel {
+    width: min(250px, calc(100vw - 20px));
+    right: 10px;
+    padding: 12px;
+  }
+
+  .panel-copy {
+    display: none;
   }
 }
