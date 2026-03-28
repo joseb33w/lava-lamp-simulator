@@ -44,10 +44,47 @@ body {
   touch-action: none;
 }
 
+.fallback-message {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  pointer-events: none;
+}
+
+.fallback-message.hidden {
+  display: none;
+}
+
+.fallback-card {
+  width: min(420px, calc(100vw - 48px));
+  padding: 20px 22px;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(180deg, rgba(27, 16, 44, 0.88), rgba(12, 8, 22, 0.76));
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: var(--shadow);
+}
+
+.fallback-card h2 {
+  margin: 6px 0 10px;
+  font-size: 1.4rem;
+}
+
+.fallback-card p:last-child {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
 .control-panel {
   position: absolute;
   top: max(16px, env(safe-area-inset-top));
   right: 16px;
+  z-index: 10;
   width: min(380px, calc(100vw - 32px));
   max-height: calc(100vh - max(32px, env(safe-area-inset-top) + env(safe-area-inset-bottom)));
   overflow: auto;

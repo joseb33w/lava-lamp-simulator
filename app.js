@@ -2,7 +2,8 @@
   'use strict'
 
   const canvas = document.getElementById('lamp-canvas')
-  const ctx = canvas.getContext('2d')
+  const fallbackMessage = document.getElementById('fallback-message')
+  const ctx = canvas && canvas.getContext ? canvas.getContext('2d', { alpha: true }) : null
 
   const lavaColorInput = document.getElementById('lava-color')
   const liquidColorInput = document.getElementById('liquid-color')
@@ -11,6 +12,11 @@
   const heatLevelInput = document.getElementById('heat-level')
   const blobCountInput = document.getElementById('blob-count')
   const shufflePaletteBtn = document.getElementById('shuffle-palette')
+
+  if (!canvas || !ctx || !lavaColorInput || !liquidColorInput || !heatLevelInput || !blobCountInput || !shufflePaletteBtn) {
+    console.error('Lava lamp init failed: required DOM elements are missing.')
+    return
+  }
 
   const palettes = [
     { lava: '#ff6b3d', liquid: '#4b2a8f' },
@@ -29,7 +35,9 @@
     targetBlobCount: 12,
     lavaColor: lavaColorInput.value,
     liquidColor: liquidColorInput.value,
-    blobs: []
+    blobs: [],
+    useSafeRenderer: false,
+    animationFrame: null
   }
 
   function clamp(value, min, max) {
@@ -57,6 +65,10 @@
 
   function randomBetween(min, max) {
     return min + Math.random() * (max - min)
+  }
+
+  function setFallbackVisible(visible) {
+    fallbackMessage.classList.toggle('hidden', !visible)
   }
 
   function resize() {
@@ -138,7 +150,7 @@
       blob.x += blob.vx * 1.2
       blob.y += blob.vy * 1.2
 
-      const horizontalLimit = getLampHalfWidthAt(blob.y) - blob.radius * 0.42
+      const horizontalLimit = Math.max(24, getLampHalfWidthAt(blob.y) - blob.radius * 0.42)
       const dx = blob.x - cx
       if (dx < -horizontalLimit || dx > horizontalLimit) {
         blob.vx *= -0.9
@@ -260,7 +272,21 @@
     ctx.closePath()
   }
 
-  function drawBlobsMetaball() {
+  function drawBlobShape(blob, softness) {
+    ctx.beginPath()
+    ctx.ellipse(
+      blob.x,
+      blob.y,
+      blob.radius * blob.stretch,
+      (blob.radius / blob.stretch) * softness,
+      Math.sin(blob.wobble) * 0.35,
+      0,
+      Math.PI * 2
+    )
+    ctx.fill()
+  }
+
+  function drawBlobsAdvanced() {
     ctx.save()
     ctx.globalCompositeOperation = 'lighter'
     ctx.filter = 'blur(18px) saturate(1.15)'
@@ -272,9 +298,7 @@
       glow.addColorStop(0.7, rgba(state.lavaColor, 0.78))
       glow.addColorStop(1, rgba(state.lavaColor, 0.05))
       ctx.fillStyle = glow
-      ctx.beginPath()
-      ctx.ellipse(blob.x, blob.y, blob.radius * blob.stretch, blob.radius / blob.stretch, Math.sin(blob.wobble) * 0.35, 0, Math.PI * 2)
-      ctx.fill()
+      drawBlobShape(blob, 1)
     })
 
     ctx.restore()
@@ -287,11 +311,46 @@
       core.addColorStop(0.18, rgba(state.lavaColor, 0.92))
       core.addColorStop(1, rgba(state.lavaColor, 0.12))
       ctx.fillStyle = core
-      ctx.beginPath()
-      ctx.ellipse(blob.x, blob.y, blob.radius * blob.stretch * 0.92, blob.radius / blob.stretch * 0.92, Math.sin(blob.wobble) * 0.35, 0, Math.PI * 2)
-      ctx.fill()
+      drawBlobShape(blob, 0.92)
     })
     ctx.restore()
+  }
+
+  function drawBlobsSafe() {
+    state.blobs.forEach((blob) => {
+      const outer = ctx.createRadialGradient(blob.x, blob.y, blob.radius * 0.15, blob.x, blob.y, blob.radius * 1.25)
+      outer.addColorStop(0, rgba('#fff8ef', 0.95))
+      outer.addColorStop(0.24, rgba(state.lavaColor, 0.92))
+      outer.addColorStop(1, rgba(state.lavaColor, 0.08))
+      ctx.fillStyle = outer
+      drawBlobShape(blob, 1)
+
+      const inner = ctx.createRadialGradient(blob.x - blob.radius * 0.2, blob.y - blob.radius * 0.22, 1, blob.x, blob.y, blob.radius)
+      inner.addColorStop(0, 'rgba(255,255,255,0.38)')
+      inner.addColorStop(0.22, rgba(state.lavaColor, 0.82))
+      inner.addColorStop(1, rgba(state.lavaColor, 0.14))
+      ctx.fillStyle = inner
+      drawBlobShape(blob, 0.94)
+    })
+  }
+
+  function drawRoundedRect(x, y, width, height, radius) {
+    ctx.beginPath()
+    if (typeof ctx.roundRect === 'function') {
+      ctx.roundRect(x, y, width, height, radius)
+      return
+    }
+    const r = Math.min(radius, width * 0.5, height * 0.5)
+    ctx.moveTo(x + r, y)
+    ctx.lineTo(x + width - r, y)
+    ctx.quadraticCurveTo(x + width, y, x + width, y + r)
+    ctx.lineTo(x + width, y + height - r)
+    ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height)
+    ctx.lineTo(x + r, y + height)
+    ctx.quadraticCurveTo(x, y + height, x, y + height - r)
+    ctx.lineTo(x, y + r)
+    ctx.quadraticCurveTo(x, y, x + r, y)
+    ctx.closePath()
   }
 
   function drawLampCaps(cx, topY, bottomY, neckWidth, baseWidth) {
@@ -300,26 +359,7 @@
     topCap.addColorStop(0.45, '#8d6330')
     topCap.addColorStop(1, '#4b2d10')
     ctx.fillStyle = topCap
-    ctx.beginPath()
-    if (typeof ctx.roundRect === 'function') {
-      ctx.roundRect(cx - neckWidth * 0.72, topY - 32, neckWidth * 1.44, 30, 16)
-    } else {
-      const x = cx - neckWidth * 0.72
-      const y = topY - 32
-      const w = neckWidth * 1.44
-      const h = 30
-      const r = 16
-      ctx.moveTo(x + r, y)
-      ctx.lineTo(x + w - r, y)
-      ctx.quadraticCurveTo(x + w, y, x + w, y + r)
-      ctx.lineTo(x + w, y + h - r)
-      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h)
-      ctx.lineTo(x + r, y + h)
-      ctx.quadraticCurveTo(x, y + h, x, y + h - r)
-      ctx.lineTo(x, y + r)
-      ctx.quadraticCurveTo(x, y, x + r, y)
-      ctx.closePath()
-    }
+    drawRoundedRect(cx - neckWidth * 0.72, topY - 32, neckWidth * 1.44, 30, 16)
     ctx.fill()
 
     const base = ctx.createLinearGradient(0, bottomY - 18, 0, bottomY + 76)
@@ -366,7 +406,8 @@
     ctx.fillStyle = innerGlow
     ctx.fillRect(cx - bodyWidth, topY, bodyWidth * 2, bottomY - topY)
 
-    drawBlobsMetaball()
+    if (state.useSafeRenderer) drawBlobsSafe()
+    else drawBlobsAdvanced()
 
     const caustic = ctx.createLinearGradient(cx - bodyWidth * 0.5, topY, cx + bodyWidth * 0.5, bottomY)
     caustic.addColorStop(0, 'rgba(255,255,255,0.08)')
@@ -409,16 +450,30 @@
     drawLampCaps(cx, topY, bottomY, neckWidth, baseWidth)
   }
 
+  function drawFrame() {
+    state.time += 0.016
+    drawBackground()
+    updateBlobs()
+    drawLampGlass()
+  }
+
   function render() {
     try {
-      state.time += 0.016
-      drawBackground()
-      updateBlobs()
-      drawLampGlass()
-      requestAnimationFrame(render)
+      drawFrame()
+      if (!state.useSafeRenderer) setFallbackVisible(false)
     } catch (error) {
-      console.error('Render error:', error.message, error.stack)
+      console.error('Advanced render error:', error.message, error.stack)
+      state.useSafeRenderer = true
+      setFallbackVisible(true)
+      try {
+        drawFrame()
+        window.setTimeout(() => setFallbackVisible(false), 1200)
+      } catch (safeError) {
+        console.error('Safe render error:', safeError.message, safeError.stack)
+      }
     }
+
+    state.animationFrame = requestAnimationFrame(render)
   }
 
   function syncLabels() {
@@ -493,6 +548,16 @@
       render()
     } catch (error) {
       console.error('Init error:', error.message, error.stack)
+      state.useSafeRenderer = true
+      setFallbackVisible(true)
+      try {
+        resize()
+        syncLabels()
+        ensureBlobCount()
+        render()
+      } catch (fallbackError) {
+        console.error('Fallback init error:', fallbackError.message, fallbackError.stack)
+      }
     }
   }
 

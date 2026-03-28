@@ -13,11 +13,19 @@
   <main class="app-shell">
     <canvas id="lamp-canvas" aria-label="Interactive lava lamp simulator"></canvas>
 
+    <div id="fallback-message" class="fallback-message hidden" role="status" aria-live="polite">
+      <div class="fallback-card">
+        <p class="eyebrow">Renderer recovery</p>
+        <h2>Refreshing the lamp view…</h2>
+        <p>If your browser had trouble with the advanced effect, a simpler live renderer is loading automatically.</p>
+      </div>
+    </div>
+
     <section class="control-panel" aria-label="Lava lamp controls">
       <div class="panel-header">
         <p class="eyebrow">Interactive Fluid Toy</p>
         <h1>Lava Lamp</h1>
-        <p class="panel-copy">Watch soft metaball blobs rise, cool, merge, split apart, and glow through reflective glass. Adjust the palette and intensity in real time.</p>
+        <p class="panel-copy">Watch soft glowing blobs rise, cool, merge, split apart, and shimmer through reflective glass. Adjust the palette and intensity in real time.</p>
       </div>
 
       <div class="controls-grid">
