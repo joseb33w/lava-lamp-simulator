@@ -39,7 +39,9 @@
       lavaColor: lavaColorInput ? lavaColorInput.value : '#ff6b3d',
       liquidColor: liquidColorInput ? liquidColorInput.value : '#4b2a8f',
       blobs: [],
-      animationFrame: null
+      animationFrame: null,
+      lastFrameTime: 0,
+      backgroundDots: []
     }
 
     function showError(message) {
@@ -77,21 +79,33 @@
       try {
         state.width = window.innerWidth || document.documentElement.clientWidth || 800
         state.height = window.innerHeight || document.documentElement.clientHeight || 600
-        state.dpr = Math.max(1, window.devicePixelRatio || 1)
+        state.dpr = Math.min(2, Math.max(1, window.devicePixelRatio || 1))
         canvas.width = Math.max(1, Math.floor(state.width * state.dpr))
         canvas.height = Math.max(1, Math.floor(state.height * state.dpr))
         canvas.style.width = `${state.width}px`
         canvas.style.height = `${state.height}px`
         ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0)
+        buildBackgroundDots()
       } catch (e) {
         showError(`Resize error: ${e.message}`)
       }
     }
 
+    function buildBackgroundDots() {
+      state.backgroundDots = Array.from({ length: 18 }, (_, i) => ({
+        x: (i * 137.31) % Math.max(1, state.width),
+        y: (i * 89.17) % Math.max(1, state.height),
+        r: (i % 3) + 1,
+        speed: 10 + (i % 5) * 6
+      }))
+    }
+
     function getLampMetrics() {
       const cx = state.width * 0.5
       const topY = state.height * 0.11
-      const bottomY = state.height * 0.89
+      const panelOnMobile = state.width <= 720
+      const reservedBottom = panelOnMobile ? Math.min(state.height * 0.26, 180) : 0
+      const bottomY = Math.min(state.height * 0.78, state.height - reservedBottom - 78)
       const bodyWidth = Math.min(320, state.width * 0.34)
       const neckWidth = bodyWidth * 0.42
       const baseWidth = bodyWidth * 0.7
@@ -207,12 +221,12 @@
       ctx.fillStyle = bg
       ctx.fillRect(0, 0, state.width, state.height)
 
-      for (let i = 0; i < 28; i += 1) {
-        const x = (i * 137.31) % state.width
-        const y = (i * 89.17 + state.time * 2) % state.height
-        ctx.fillStyle = 'rgba(255,255,255,0.04)'
+      for (let i = 0; i < state.backgroundDots.length; i += 1) {
+        const dot = state.backgroundDots[i]
+        const y = (dot.y + state.time * dot.speed) % Math.max(1, state.height + 24)
+        ctx.fillStyle = 'rgba(255,255,255,0.035)'
         ctx.beginPath()
-        ctx.arc(x, y, (i % 3) + 1, 0, Math.PI * 2)
+        ctx.arc(dot.x, y - 12, dot.r, 0, Math.PI * 2)
         ctx.fill()
       }
     }
@@ -352,16 +366,19 @@
       drawLampCaps()
     }
 
-    function drawFrame() {
-      state.time += 0.016
+    function drawFrame(deltaSeconds) {
+      state.time += deltaSeconds
       drawBackground()
       updateBlobs()
       drawLamp()
     }
 
-    function render() {
+    function render(now) {
       try {
-        drawFrame()
+        if (!state.lastFrameTime) state.lastFrameTime = now
+        const deltaMs = Math.min(32, now - state.lastFrameTime)
+        state.lastFrameTime = now
+        drawFrame(deltaMs / 1000)
       } catch (e) {
         showError(`Render error: ${e.message}`)
       }
@@ -445,7 +462,7 @@
         bindEvents()
         syncLabels()
         ensureBlobCount()
-        render()
+        render(0)
       } catch (e) {
         showError(`Init error: ${e.message}`)
       }
